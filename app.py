@@ -22,7 +22,8 @@ print("🙏 Spiritual Guide ready. Hare Krishna!")
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    from flask import redirect
+    return redirect('/bot')
 
 
 # ════════════════════════════════════════
