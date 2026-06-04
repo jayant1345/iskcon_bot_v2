@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv venv)",
+      "Bash(PYTHONUTF8=1 venv/Scripts/python -c ' *)"
+    ]
+  }
+}

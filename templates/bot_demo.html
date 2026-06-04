@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spiritual Guide — ISKCON Books</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Crimson+Pro:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            background: #0b0804;
+            color: #f0e6d3;
+            font-family: 'Crimson Pro', serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image:
+                radial-gradient(ellipse at 15% 60%, rgba(180,120,40,0.07) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 20%, rgba(160,70,15,0.05) 0%, transparent 50%);
+        }
+
+        .page-wrap {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .om-symbol {
+            font-size: 2.8rem;
+            display: block;
+            margin-bottom: 10px;
+            animation: omGlow 3s ease-in-out infinite;
+        }
+        @keyframes omGlow {
+            0%,100% { filter: drop-shadow(0 0 8px rgba(200,146,58,0.4)); }
+            50%      { filter: drop-shadow(0 0 22px rgba(200,146,58,0.8)); }
+        }
+        .page-header h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.7rem;
+            font-weight: 500;
+            color: #e8d5b0;
+            letter-spacing: 0.04em;
+        }
+        .page-header p {
+            font-size: 0.85rem;
+            color: #7a6850;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* ── Language Badge ── */
+        .lang-badge {
+            display: inline-block;
+            background: rgba(200,146,58,0.1);
+            border: 1px solid rgba(200,146,58,0.25);
+            border-radius: 20px;
+            padding: 3px 12px;
+            font-size: 0.72rem;
+            color: #c8923a;
+            margin-top: 8px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        /* ── Chat Box ── */
+        .chat-box {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(200,146,58,0.18);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(200,146,58,0.1);
+        }
+
+        /* ── Chat Header Bar ── */
+        .chat-topbar {
+            background: linear-gradient(135deg, rgba(200,146,58,0.12), rgba(150,70,15,0.08));
+            border-bottom: 1px solid rgba(200,146,58,0.18);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .guru-orb {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, #c8923a, #7a4010);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; flex-shrink: 0;
+            box-shadow: 0 0 14px rgba(200,146,58,0.35);
+        }
+        .guru-info h3 { font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #e8d5b0; }
+        .guru-info p  { font-size: 0.7rem; color: #6a5540; margin-top: 1px; }
+
+        .status-row { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .online-dot {
+            width: 8px; height: 8px;
+            background: #5cb88a; border-radius: 50%;
+            box-shadow: 0 0 6px rgba(92,184,138,0.5);
+            animation: blink 2s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        #topLangBadge {
+            font-size: 0.62rem; color: #5a4830;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+
+        /* ── Messages ── */
+        .messages {
+            height: 430px;
+            overflow-y: auto;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+        .messages::-webkit-scrollbar { width: 3px; }
+        .messages::-webkit-scrollbar-thumb { background: rgba(200,146,58,0.2); border-radius: 2px; }
+
+        .msg { max-width: 88%; animation: msgIn 0.28s ease; }
+        @keyframes msgIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        .msg.bot  { align-self: flex-start; }
+        .msg.user { align-self: flex-end; }
+
+        .bubble {
+            padding: 13px 16px;
+            border-radius: 14px;
+            font-size: 0.93rem;
+            line-height: 1.72;
+        }
+        .msg.bot  .bubble {
+            background: rgba(200,146,58,0.07);
+            border: 1px solid rgba(200,146,58,0.14);
+            border-bottom-left-radius: 3px;
+            color: #e2ceaa;
+            font-style: italic;
+        }
+        .msg.user .bubble {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-bottom-right-radius: 3px;
+            color: #b0a080;
+        }
+
+        /* voice button */
+        .voice-btn {
+            background: none; border: none; cursor: pointer;
+            font-size: 0.75rem; color: #3a2e1e;
+            padding: 3px 6px; margin-top: 4px;
+            display: flex; align-items: center; gap: 4px;
+            transition: color 0.2s;
+        }
+        .voice-btn:hover { color: #c8923a; }
+
+        /* ── Book Card ── */
+        .book-card {
+            align-self: flex-start;
+            max-width: 88%;
+            background: rgba(200,146,58,0.05);
+            border: 1px solid rgba(200,146,58,0.2);
+            border-radius: 12px;
+            padding: 13px 15px;
+            animation: msgIn 0.3s ease 0.35s both;
+        }
+        .book-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: #c8923a; margin-bottom: 6px; }
+        .book-title { font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: #e8d5b0; margin-bottom: 3px; }
+        .book-why   { font-size: 0.78rem; color: #6a5540; font-style: italic; margin-bottom: 9px; line-height: 1.45; }
+        .book-link  {
+            display: inline-block;
+            background: rgba(200,146,58,0.12);
+            border: 1px solid rgba(200,146,58,0.28);
+            color: #c8923a; text-decoration: none;
+            font-size: 0.75rem; padding: 5px 14px; border-radius: 18px;
+            transition: background 0.2s;
+        }
+        .book-link:hover { background: rgba(200,146,58,0.22); }
+
+        /* ── Typing ── */
+        .typing {
+            align-self: flex-start;
+            display: none;
+            gap: 5px; align-items: center;
+            padding: 11px 15px;
+            background: rgba(200,146,58,0.07);
+            border: 1px solid rgba(200,146,58,0.14);
+            border-radius: 14px; border-bottom-left-radius: 3px;
+        }
+        .typing.show { display: flex; }
+        .dot {
+            width: 5px; height: 5px;
+            background: #c8923a; border-radius: 50%;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+        .dot:nth-child(2){animation-delay:.2s}
+        .dot:nth-child(3){animation-delay:.4s}
+        @keyframes bounce {
+            0%,60%,100%{transform:translateY(0);opacity:.4}
+            30%{transform:translateY(-5px);opacity:1}
+        }
+
+        /* ── Input ── */
+        .input-row {
+            border-top: 1px solid rgba(200,146,58,0.12);
+            padding: 13px 16px;
+            display: flex; gap: 10px; align-items: flex-end;
+            background: rgba(0,0,0,0.18);
+        }
+        .msg-input {
+            flex: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(200,146,58,0.16);
+            border-radius: 11px;
+            padding: 10px 14px;
+            color: #e8d5b0;
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.92rem;
+            resize: none; outline: none;
+            line-height: 1.5; max-height: 96px;
+            transition: border-color 0.2s;
+        }
+        .msg-input::placeholder { color: #2a2018; }
+        .msg-input:focus { border-color: rgba(200,146,58,0.35); }
+
+        .send-btn {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #c8923a, #7a4010);
+            border: none; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: transform 0.15s;
+            box-shadow: 0 2px 12px rgba(200,146,58,0.3);
+        }
+        .send-btn:hover  { transform: scale(1.07); }
+        .send-btn:active { transform: scale(0.96); }
+        .send-btn svg { width: 16px; height: 16px; fill: white; }
+
+        /* ── Footer ── */
+        .chat-foot {
+            padding: 6px 16px 10px;
+            text-align: center;
+            font-size: 0.66rem; color: #2a2018;
+            background: rgba(0,0,0,0.18);
+        }
+        .chat-foot a { color: #3a2e20; text-decoration: none; }
+        .chat-foot a:hover { color: #c8923a; }
+
+        @media(max-width:520px){
+            .page-wrap{padding:12px;}
+            .messages{height:370px;}
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrap">
+
+    <div class="page-header">
+        <span class="om-symbol">🕉️</span>
+        <h1>Spiritual Guide</h1>
+        <p>Bhagavat Gita &amp; Shrimad Bhagavatam Wisdom</p>
+        <div class="lang-badge" id="langBadge">Detecting language...</div>
+    </div>
+
+    <div class="chat-box">
+        <div class="chat-topbar">
+            <div class="guru-orb">🙏</div>
+            <div class="guru-info">
+                <h3>Vaishnava Guide</h3>
+                <p>English · हिंदी · ગુજરાતી · Hinglish</p>
+            </div>
+            <div class="status-row">
+                <div class="online-dot"></div>
+                <span id="topLangBadge">—</span>
+            </div>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="typing" id="typing">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+        </div>
+
+        <div class="input-row">
+            <textarea class="msg-input" id="msgInput"
+                placeholder="What is in your heart today... / आज मन में क्या है... / આજે મનમાં શું છે..."
+                rows="1"></textarea>
+            <button class="send-btn" onclick="send()">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+
+        <div class="chat-foot">
+            <a href="https://iskconbooks.in" target="_blank">iskconbooks.in</a>
+            &nbsp;·&nbsp; Hare Krishna 🙏
+        </div>
+    </div>
+</div>
+
+<script>
+    let sessionId   = null;
+    let waiting     = false;
+    let currentLang = 'english';
+
+    const LANG_CODES = {
+        english:  'en-IN',
+        hindi:    'hi-IN',
+        gujarati: 'gu-IN',
+        hinglish: 'hi-IN',
+    };
+
+    const LANG_LABELS = {
+        english:   '🇬🇧 English',
+        hindi:     '🇮🇳 हिंदी',
+        gujarati:  '🇮🇳 ગુજરાતી',
+        hinglish:  '🇮🇳 Hinglish',
+        bengali:   '🇮🇳 বাংলা',
+    };
+
+    // Auto-resize textarea
+    const input = document.getElementById('msgInput');
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 96) + 'px';
+    });
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+
+    // Init — get greeting
+    async function init() {
+        try {
+            const r    = await fetch('/api/bot/greet');
+            const data = await r.json();
+            sessionId  = data.session_id;
+            updateLangBadge(data.language);
+            addBotMsg(data.message, null, false);
+        } catch {
+            sessionId = 'local-' + Date.now();
+            addBotMsg('Hare Krishna 🙏\n\nDear soul, what is in your heart today?', null, false);
+            updateLangBadge('english');
+        }
+    }
+
+    async function send() {
+        const msg = input.value.trim();
+        if (!msg || waiting) return;
+
+        addUserMsg(msg);
+        input.value = '';
+        input.style.height = 'auto';
+        waiting = true;
+        showTyping(true);
+
+        try {
+            const r    = await fetch('/api/bot/chat', {
+                method:  'POST',
+                headers: {'Content-Type':'application/json'},
+                body:    JSON.stringify({ message: msg, session_id: sessionId })
+            });
+            const data = await r.json();
+            showTyping(false);
+            updateLangBadge(data.language);
+            addBotMsg(data.reply, data.book, true);
+        } catch {
+            showTyping(false);
+            addBotMsg('Dear one, please try again in a moment 🙏', null, false);
+        }
+        waiting = false;
+    }
+
+    window._msgStore  = {};
+    window._langStore = {};
+
+    function addBotMsg(text, book, withVoice) {
+        const area   = document.getElementById('messages');
+        const typing = document.getElementById('typing');
+        const div    = document.createElement('div');
+        div.className = 'msg bot';
+
+        const msgId = 'msg_' + Date.now();
+        window._msgStore[msgId]  = text;
+        window._langStore[msgId] = currentLang;
+
+        div.innerHTML = `
+            <div class="bubble">${text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>
+            ${withVoice ? `<button class="voice-btn" data-msgid="${msgId}" onclick="speak(this)">🔊 Listen</button>` : ''}
+        `;
+        area.insertBefore(div, typing);
+
+        if (book) {
+            setTimeout(() => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.innerHTML = `
+                    <div class="book-label">📖 Srila Prabhupada suggests</div>
+                    <div class="book-title">${book.title}</div>
+                    <div class="book-why">${book.why}</div>
+                    <a class="book-link" href="${book.url}" target="_blank">Read this book →</a>
+                `;
+                area.insertBefore(card, typing);
+                scrollDown();
+            }, 700);
+        }
+        scrollDown();
+    }
+
+    function addUserMsg(text) {
+        const area   = document.getElementById('messages');
+        const typing = document.getElementById('typing');
+        const div    = document.createElement('div');
+        div.className = 'msg user';
+        div.innerHTML = `<div class="bubble">${text}</div>`;
+        area.insertBefore(div, typing);
+        scrollDown();
+    }
+
+    function showTyping(show) {
+        document.getElementById('typing').classList.toggle('show', show);
+        if (show) scrollDown();
+    }
+
+    function updateLangBadge(lang) {
+        if (!lang) return;
+        currentLang = lang;
+        const label = LANG_LABELS[lang] || lang;
+        document.getElementById('langBadge').textContent    = label;
+        document.getElementById('topLangBadge').textContent = label;
+    }
+
+    function speak(btn) {
+        if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+            btn.innerHTML = '🔊 Listen';
+            return;
+        }
+        const msgId    = btn.getAttribute('data-msgid');
+        const text     = window._msgStore[msgId]  || '';
+        const lang     = window._langStore[msgId] || 'english';
+        const langCode = LANG_CODES[lang] || 'en-IN';
+
+        const voices   = speechSynthesis.getVoices();
+
+        // Try to find a matching voice for the language
+        let voice = voices.find(v => v.lang === langCode)
+                 || voices.find(v => v.lang.startsWith(langCode.split('-')[0]))
+                 || null;
+
+        const u   = new SpeechSynthesisUtterance(text);
+        u.lang    = langCode;
+        u.rate    = 0.82;
+        u.pitch   = 0.9;
+        if (voice) u.voice = voice;
+        u.onstart = () => btn.innerHTML = '⏹ Stop';
+        u.onend   = () => btn.innerHTML = '🔊 Listen';
+        window.speechSynthesis.speak(u);
+    }
+
+    function scrollDown() {
+        const area = document.getElementById('messages');
+        setTimeout(() => area.scrollTop = area.scrollHeight, 60);
+    }
+
+    init();
+</script>
+</body>
+</html>
