@@ -90,6 +90,21 @@ class SpiritualGuide:
         language  = lang_info["language"]
         lang_instruction = lang_info["reply_instruction"]
 
+        # Override: user typed in English but explicitly requested a language
+        # e.g. "say again in gujarati", "reply in hindi"
+        msg_lower = message.lower()
+        if language == "english":
+            if any(w in msg_lower for w in ["gujarati", "in gujarati", "gujaratima", "gujarati ma"]):
+                from bot.language_detector import detect_language as _dl
+                lang_info    = _dl("ગ")   # force Gujarati detection
+                language     = "gujarati"
+                lang_instruction = lang_info["reply_instruction"]
+            elif any(w in msg_lower for w in ["in hindi", "hindi mein", "hindi me ", "hindi please", "hindi main"]):
+                from bot.language_detector import detect_language as _dl
+                lang_info    = _dl("क")   # force Hindi detection
+                language     = "hindi"
+                lang_instruction = lang_info["reply_instruction"]
+
         # ── Detect Spiritual Intent ───────────────────────────
         intent   = detect_intent(message)
         emotion  = intent["emotion"]
