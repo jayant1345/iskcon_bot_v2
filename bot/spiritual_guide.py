@@ -173,8 +173,9 @@ DETECTED EMOTION: {emotion}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
         # ── Call Claude Haiku ─────────────────────────────────
-        # Hindi/Gujarati script uses 2-3x more tokens per word than English
-        lang_token_multiplier = 2 if language in ("hindi", "gujarati") else 1
+        # Indic scripts use more tokens per word than English
+        # Gujarati is less common in training data → needs even more headroom
+        lang_token_multiplier = 3 if language == "gujarati" else (2 if language == "hindi" else 1)
         effective_max_tokens  = Config.BOT_MAX_TOKENS * lang_token_multiplier
 
         response = self.client.messages.create(
