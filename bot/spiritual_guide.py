@@ -173,9 +173,13 @@ DETECTED EMOTION: {emotion}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
         # ── Call Claude Haiku ─────────────────────────────────
+        # Hindi/Gujarati script uses 2-3x more tokens per word than English
+        lang_token_multiplier = 2 if language in ("hindi", "gujarati") else 1
+        effective_max_tokens  = Config.BOT_MAX_TOKENS * lang_token_multiplier
+
         response = self.client.messages.create(
             model      = "claude-haiku-4-5-20251001",
-            max_tokens = Config.BOT_MAX_TOKENS,
+            max_tokens = effective_max_tokens,
             system     = full_system,
             messages   = recent_messages,
         )

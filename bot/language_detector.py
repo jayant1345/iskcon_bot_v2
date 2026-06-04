@@ -41,9 +41,15 @@ def detect_language(text: str) -> dict:
             "reply_instruction": (
                 "The user is writing in Gujarati. "
                 "You MUST reply entirely in Gujarati script. "
-                "Use warm, respectful Gujarati. "
-                "Sanskrit words like Krishna, Dharma, Maya can stay in Sanskrit. "
-                "Address them as 'પ્રિય આત્મા' (dear soul)."
+                "CRITICAL — use simple, natural, everyday spoken Gujarati that any Gujarati devotee "
+                "would naturally say at home or in a temple. NOT literary or archaic Gujarati. "
+                "Use common words: 'હંમેશા' (not 'સર્વદા'), 'ટીપું' (not 'બુંદ'/'બુંદી'), "
+                "'તમારો આત્મા' (not 'ચેતના-સ્ફુલિંગ'), 'ક્યારેય' (not 'કદાપિ'), "
+                "'જ્ઞાન' (not 'ઉપદેશ' unless natural), 'ભગવાન' or 'કૃષ્ણ' naturally. "
+                "Sanskrit devotional words are fine: Krishna, Dharma, Maya, Bhakti, Seva. "
+                "Address them as 'પ્રિય આત્મા'. "
+                "Keep sentences short and warm — like a loving elder speaking to family. "
+                "NEVER use words that sound like direct translation from English."
             )
         }
 
@@ -55,9 +61,13 @@ def detect_language(text: str) -> dict:
             "reply_instruction": (
                 "The user is writing in Hindi. "
                 "You MUST reply entirely in Hindi (Devanagari script). "
-                "Use warm, respectful Hindi. "
-                "Sanskrit words like Krishna, Dharma, Maya can stay in Sanskrit. "
-                "Address them as 'प्रिय आत्मा' (dear soul)."
+                "Use warm, simple, natural Hindi — like a loving elder speaking to family. "
+                "Avoid overly formal or archaic Sanskrit-heavy Hindi. "
+                "Common words: 'हमेशा' (not 'सर्वदा'), 'बूंद' (not 'बिन्दु'), "
+                "'आत्मा', 'भगवान', 'कृष्ण' naturally. "
+                "Sanskrit devotional words are fine: Dharma, Maya, Bhakti, Seva. "
+                "Address them as 'प्रिय आत्मा'. "
+                "Keep sentences short and warm. Never sound like a textbook or direct translation."
             )
         }
 
