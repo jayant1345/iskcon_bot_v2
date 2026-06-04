@@ -162,7 +162,7 @@ TONE: {tone} | EMOTION: {emotion}"""
 
         # ── Book Suggestion ───────────────────────────────────
         book = None
-        if session["turn_count"] >= 2:
+        if session["turn_count"] >= 1:
             book = get_book_suggestion(themes, emotion, session["books_shown"])
             if book:
                 session["books_shown"].append(book["title"])
