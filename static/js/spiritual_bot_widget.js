@@ -9,6 +9,7 @@
 (function () {
     'use strict';
 
+    const BOT_URL = 'https://iskconbotv2-production.up.railway.app';
     let sessionId = null, waiting = false, open = false;
 
     const LANG_LABELS = {
@@ -212,7 +213,7 @@
 
     async function isbInit() {
         try {
-            const r    = await fetch('/api/bot/greet');
+            const r    = await fetch(BOT_URL + '/api/bot/greet');
             const data = await r.json();
             sessionId  = data.session_id;
             updateLang(data.language);
@@ -231,7 +232,7 @@
         waiting = true; showTyp(true);
 
         try {
-            const r    = await fetch('/api/bot/chat', {
+            const r    = await fetch(BOT_URL + '/api/bot/chat', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify({ message: msg, session_id: sessionId })

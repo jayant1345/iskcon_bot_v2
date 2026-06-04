@@ -7,11 +7,13 @@
 
 import uuid
 from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 from config.settings   import Config
 from bot.spiritual_guide import SpiritualGuide
 
 app   = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
+CORS(app, resources={r"/api/*": {"origins": ["https://iskconbooks.in", "http://iskconbooks.in"]}})
 guide = SpiritualGuide()
 print("🙏 Spiritual Guide ready. Hare Krishna!")
 
