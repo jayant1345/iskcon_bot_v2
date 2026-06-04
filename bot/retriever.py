@@ -81,6 +81,9 @@ def format_chunks_for_prompt(chunks: list) -> str:
 
     parts = []
     for i, c in enumerate(chunks, 1):
-        parts.append(f"[Teaching {i} — {c['source']}]\n{c['text']}")
+        ref = ""
+        if c.get("chapter") and c.get("verse"):
+            ref = f" — Chapter {c['chapter']}, Verse {c['verse']}"
+        parts.append(f"[{c['source']}{ref}]\n{c['text']}")
 
     return "\n\n---\n\n".join(parts)
