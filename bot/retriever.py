@@ -77,7 +77,7 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
 def format_chunks_for_prompt(chunks: list) -> str:
     """Formats chunks as context for the LLM prompt."""
     if not chunks:
-        return "Draw from general Bhagavat Gita and Bhagavatam wisdom."
+        return "NO_CONTEXT_FOUND"
 
     parts = []
     for i, c in enumerate(chunks, 1):
