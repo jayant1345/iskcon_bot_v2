@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spiritual Guide — ISKCON Books</title>
+    <title>Spiritual Guide — ISKCON Ahmedabad</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Crimson+Pro:wght@300;400&display=swap" rel="stylesheet">
     <style>
@@ -34,14 +34,18 @@
             margin-bottom: 24px;
         }
         .om-symbol {
-            font-size: 2.8rem;
             display: block;
-            margin-bottom: 10px;
+            margin: 0 auto 12px auto;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(200,146,58,0.5);
             animation: omGlow 3s ease-in-out infinite;
         }
         @keyframes omGlow {
-            0%,100% { filter: drop-shadow(0 0 8px rgba(200,146,58,0.4)); }
-            50%      { filter: drop-shadow(0 0 22px rgba(200,146,58,0.8)); }
+            0%,100% { box-shadow: 0 0 10px rgba(200,146,58,0.4), 0 0 20px rgba(200,146,58,0.2); }
+            50%      { box-shadow: 0 0 20px rgba(200,146,58,0.8), 0 0 40px rgba(200,146,58,0.4); }
         }
         .page-header h1 {
             font-family: 'Cormorant Garamond', serif;
@@ -263,9 +267,9 @@
 <div class="page-wrap">
 
     <div class="page-header">
-        <span class="om-symbol">🕉️</span>
+        <img class="om-symbol" src="/static/radha_govind.jpg" alt="Radha Govind — ISKCON Ahmedabad">
         <h1>Spiritual Guide</h1>
-        <p>Bhagavat Gita &amp; Shrimad Bhagavatam Wisdom</p>
+        <p>ISKCON Ahmedabad &nbsp;|&nbsp; Bhagavat Gita &amp; Shrimad Bhagavatam Wisdom</p>
         <div class="lang-badge" id="langBadge">Detecting language...</div>
     </div>
 
