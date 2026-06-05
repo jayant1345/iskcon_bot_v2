@@ -3,8 +3,12 @@
 # Retrieves most relevant scripture chunks from pgvector.
 
 import psycopg2
+import logging
 from sentence_transformers import SentenceTransformer
 from config.settings import Config
+
+logger = logging.getLogger(__name__)
+SIMILARITY_THRESHOLD = 0.15
 
 _model = None
 
@@ -71,7 +75,30 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
                 "similarity": float(row[6]),
             })
 
+    # Filter out low-quality matches
+    final = [c for c in final if c["similarity"] > SIMILARITY_THRESHOLD]
+
+    if not final:
+        logger.warning("⚠️  No relevant chunks found for: '%s'", question[:80])
+    else:
+        logger.info("✅ Retrieved %d chunks (top similarity: %.2f)", len(final), final[0]["similarity"])
+
     return final
+
+
+def get_chunk_count() -> int:
+    """Returns total number of chunks in DB — used for health checks."""
+    try:
+        conn = psycopg2.connect(Config.DATABASE_URL)
+        cur  = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM scripture_chunks;")
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        return count
+    except Exception as e:
+        logger.error("DB error: %s", e)
+        return -1
 
 
 def format_chunks_for_prompt(chunks: list) -> str:

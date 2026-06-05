@@ -91,7 +91,46 @@ def chat():
 
 @app.route('/api/bot/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'healthy', 'msg': 'Hare Krishna 🙏'})
+    from bot.retriever import get_chunk_count
+    count = get_chunk_count()
+    if count == 0:
+        print("⚠️  WARNING: scripture_chunks table is EMPTY — PDF not ingested!")
+    return jsonify({'status': 'healthy', 'msg': 'Hare Krishna 🙏', 'chunks_in_db': count})
+
+
+# ════════════════════════════════════════
+# DEBUG ROUTES (check RAG is working)
+# ════════════════════════════════════════
+
+@app.route('/api/debug/chunks', methods=['GET'])
+def debug_chunks():
+    """Check how many scripture chunks are in the DB."""
+    from bot.retriever import get_chunk_count
+    count = get_chunk_count()
+    status = "✅ DB has data" if count > 0 else "❌ DB is EMPTY — run ingest_pdf.py"
+    return jsonify({'total_chunks': count, 'status': status})
+
+
+@app.route('/api/debug/retrieve', methods=['GET'])
+def debug_retrieve():
+    """Test retrieval for a query. Usage: /api/debug/retrieve?q=your+question"""
+    from bot.retriever import retrieve_relevant_chunks
+    q = request.args.get('q', 'what is dharma')
+    chunks = retrieve_relevant_chunks(q, [])
+    return jsonify({
+        'query':        q,
+        'chunks_found': len(chunks),
+        'chunks': [
+            {
+                'source':     c['source'],
+                'chapter':    c['chapter'],
+                'verse':      c['verse'],
+                'similarity': round(c['similarity'], 3),
+                'preview':    c['text'][:120] + '...'
+            }
+            for c in chunks
+        ]
+    })
 
 
 # ════════════════════════════════════════
