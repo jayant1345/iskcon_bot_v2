@@ -18,6 +18,14 @@ THEME_THRESHOLD      = 0.05
 
 _model = None
 
+# Exact verse counts per chapter in Bhagavad Gita As It Is (used to reject bad metadata)
+_CHAPTER_MAX_VERSE = {
+    "1": 47, "2": 72, "3": 43, "4": 42, "5": 29,
+    "6": 47, "7": 30, "8": 28, "9": 34, "10": 42,
+    "11": 55, "12": 20, "13": 35, "14": 27, "15": 20,
+    "16": 24, "17": 28, "18": 78,
+}
+
 # English ordinals used in Prabhupada chapter headings ("CHAPTER TWO" etc.)
 _ORDINALS = {
     "ONE": "1", "TWO": "2", "THREE": "3", "FOUR": "4", "FIVE": "5",
@@ -104,6 +112,17 @@ def _resolve_ref(chapter, verse, text: str):
     if vs.startswith("p.") or not vs:
         vs = ""
 
+    # Reject verse number if it exceeds the known max for that chapter.
+    # "TEXT 49" in a Chapter 10 purport is a paragraph counter, not a verse.
+    if vs and ch:
+        try:
+            vs_num  = int(vs)
+            max_vs  = _CHAPTER_MAX_VERSE.get(ch, 999)
+            if vs_num < 1 or vs_num > max_vs:
+                vs = ""
+        except ValueError:
+            vs = ""
+
     # Fallback: scan the chunk text for headings Prabhupada books always contain
     if not ch:
         m = _CH_RE.search(text)
@@ -121,7 +140,14 @@ def _resolve_ref(chapter, verse, text: str):
     if not vs:
         m = _VS_RE.search(text)
         if m:
-            vs = m.group(1)
+            candidate = m.group(1)
+            try:
+                vs_num = int(candidate)
+                max_vs = _CHAPTER_MAX_VERSE.get(ch, 999)
+                if 1 <= vs_num <= max_vs:
+                    vs = candidate
+            except ValueError:
+                pass
 
     return ch, vs
 
