@@ -81,11 +81,12 @@ def chat():
     result = guide.respond(message=message, session_id=session_id)
 
     return jsonify({
-        'reply':    result['wisdom'],
-        'book':     result.get('book'),
-        'language': result.get('language', 'english'),
-        'blocked':  result.get('blocked', False),
-        'status':   'success'
+        'reply':          result['wisdom'],
+        'book':           result.get('book'),
+        'language':       result.get('language', 'english'),
+        'blocked':        result.get('blocked', False),
+        'scripture_ref':  result.get('scripture_ref'),   # {"source", "chapter", "verse"}
+        'status':         'success'
     })
 
 
@@ -113,7 +114,7 @@ def debug_chunks():
 
 @app.route('/api/debug/retrieve', methods=['GET'])
 def debug_retrieve():
-    """Test retrieval for a query. Usage: /api/debug/retrieve?q=your+question"""
+    """Test retrieval. Usage: /api/debug/retrieve?q=your+question"""
     from bot.retriever import retrieve_relevant_chunks
     q = request.args.get('q', 'what is dharma')
     chunks = retrieve_relevant_chunks(q, [])
@@ -130,6 +131,32 @@ def debug_retrieve():
             }
             for c in chunks
         ]
+    })
+
+
+@app.route('/api/debug/rag', methods=['GET'])
+def debug_rag():
+    """
+    Shows the EXACT context that gets sent to Claude for a question.
+    Use this to verify RAG is working and references are correct.
+    Usage: /api/debug/rag?q=what+is+karma
+    """
+    from bot.retriever import retrieve_relevant_chunks, format_chunks_for_prompt
+    from bot.intent_detector import detect_intent
+    q      = request.args.get('q', 'what is karma')
+    intent = detect_intent(q)
+    chunks = retrieve_relevant_chunks(q, intent['themes'])
+    context = format_chunks_for_prompt(chunks)
+    return jsonify({
+        'query':          q,
+        'themes_detected': intent['themes'],
+        'chunks_found':   len(chunks),
+        'similarity_scores': [round(c['similarity'], 3) for c in chunks],
+        'references':     [
+            f"Ch {c['chapter']} V {c['verse']}" if c['chapter'] else 'no ref'
+            for c in chunks
+        ],
+        'context_sent_to_claude': context,
     })
 
 

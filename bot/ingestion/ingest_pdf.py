@@ -12,6 +12,7 @@
 #   pip install PyMuPDF  (already in requirements.txt)
 
 import os
+import re
 import sys
 import argparse
 import psycopg2
@@ -19,6 +20,14 @@ import fitz          # PyMuPDF — reads PDF
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from config.settings import Config
+
+# Maps English ordinals to digits (Prabhupada books use "CHAPTER TWO" etc.)
+ORDINAL_TO_NUM = {
+    "ONE": "1", "TWO": "2", "THREE": "3", "FOUR": "4", "FIVE": "5",
+    "SIX": "6", "SEVEN": "7", "EIGHT": "8", "NINE": "9", "TEN": "10",
+    "ELEVEN": "11", "TWELVE": "12", "THIRTEEN": "13", "FOURTEEN": "14",
+    "FIFTEEN": "15", "SIXTEEN": "16", "SEVENTEEN": "17", "EIGHTEEN": "18",
+}
 
 # ─────────────────────────────────────────────
 # SPIRITUAL THEME KEYWORDS
@@ -71,49 +80,72 @@ def extract_text_from_pdf(pdf_path: str) -> list:
     return pages
 
 
+def _parse_chapter_verse(text: str, prev_chapter: str, prev_verse: str):
+    """
+    Scans page text for CHAPTER / TEXT headings common in Prabhupada books.
+    Returns (chapter, verse) — carries forward previous values when not found on this page.
+
+    Key rule: ONLY update chapter when a valid ordinal or digit 1-18 is found.
+    Articles like THE, OF, THIS are skipped — they appear in headings like
+    "CHAPTER THE YOGA OF..." and must not be stored as chapter numbers.
+    """
+    ch_match = re.search(r'CHAPTER\s+([A-Z]+|\d+)', text, re.IGNORECASE)
+    vs_match = re.search(r'(?:TEXT|VERSE)\s+(\d+)', text, re.IGNORECASE)
+
+    chapter = prev_chapter   # carry forward by default
+    verse   = prev_verse
+
+    if ch_match:
+        raw = ch_match.group(1).upper()
+        if raw in ORDINAL_TO_NUM:
+            chapter = ORDINAL_TO_NUM[raw]        # "TWO" → "2"
+        elif raw.isdigit() and 1 <= int(raw) <= 18:
+            chapter = raw                        # "2" stays "2"
+        # else: skip — "THE", "OF", "THIS" etc. are not chapter numbers
+
+    if vs_match:
+        verse = vs_match.group(1)
+
+    return chapter, verse
+
+
 def chunk_pages(pages: list, chunk_size: int = 600, overlap: int = 100) -> list:
     """
-    Splits page text into overlapping chunks.
-    
-    chunk_size = ~600 chars = roughly half a page
-    overlap = 100 chars = ensures no wisdom is cut mid-thought
-    
-    Returns list of chunk dicts.
+    Splits page text into overlapping chunks, tracking real chapter/verse headings.
+
+    chunk_size = ~600 chars  ≈ one purport paragraph
+    overlap    = 100 chars   = ensures no wisdom is cut mid-thought
     """
     chunks = []
-    full_text = ""
-    page_map  = []   # tracks which page each char belongs to
+    current_chapter = None
+    current_verse   = None
 
-    # Combine all pages into one stream with page tracking
     for page_num, text in pages:
-        start = len(full_text)
-        full_text += " " + text
-        page_map.append((start, len(full_text), page_num))
+        # Update running chapter/verse from this page's headings
+        current_chapter, current_verse = _parse_chapter_verse(
+            text, current_chapter, current_verse
+        )
 
-    def get_page_for_pos(pos):
-        for start, end, pg in page_map:
-            if start <= pos < end:
-                return pg
-        return 0
+        pos = 0
+        while pos < len(text):
+            end        = min(pos + chunk_size, len(text))
+            chunk_text = text[pos:end].strip()
 
-    # Slide window through full text
-    pos = 0
-    while pos < len(full_text):
-        end  = min(pos + chunk_size, len(full_text))
-        text = full_text[pos:end].strip()
+            if len(chunk_text) > 150:
+                # Check if this window itself starts a new verse
+                _, local_verse = _parse_chapter_verse(chunk_text, current_chapter, current_verse)
+                themes, emotions = auto_tag(chunk_text)
 
-        if len(text) > 150:   # skip tiny fragments
-            page_num = get_page_for_pos(pos)
-            themes, emotions = auto_tag(text)
+                chunks.append({
+                    "text":    chunk_text,
+                    "page":    page_num,
+                    "chapter": current_chapter,
+                    "verse":   local_verse,
+                    "themes":  themes,
+                    "emotions": emotions,
+                })
 
-            chunks.append({
-                "text":      text,
-                "page":      page_num,
-                "themes":    themes,
-                "emotions":  emotions,
-            })
-
-        pos += chunk_size - overlap   # slide with overlap
+            pos += chunk_size - overlap
 
     return chunks
 
@@ -156,46 +188,44 @@ def ingest_pdf(pdf_path: str, source_name: str):
     model = SentenceTransformer(Config.EMBEDDING_MODEL)
     print("✅ Embedding model ready")
 
-    # Step 4: Connect to database
-    conn = psycopg2.connect(Config.DATABASE_URL)
-    cur  = conn.cursor()
-
-    # Step 5: Remove existing chunks for this source
-    cur.execute("DELETE FROM scripture_chunks WHERE source = %s", (source_name,))
+    # Step 4: Clear old chunks for this source (fresh connection)
+    with psycopg2.connect(Config.DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM scripture_chunks WHERE source = %s", (source_name,))
+        conn.commit()
     print(f"🗑️  Cleared old {source_name} chunks")
 
-    # Step 6: Embed and store each chunk
+    # Step 5: Embed and store — reconnect each batch to avoid Railway proxy timeout
     print(f"\n📥 Storing {len(chunks)} chunks into pgvector...")
-    batch_size = 32   # embed 32 at a time for speed
+    batch_size = 32
 
     for i in range(0, len(chunks), batch_size):
         batch = chunks[i:i + batch_size]
         texts = [c["text"] for c in batch]
 
-        # Generate embeddings for whole batch at once (faster)
         embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
 
-        for chunk, embedding in zip(batch, embeddings):
-            cur.execute("""
-                INSERT INTO scripture_chunks
-                    (source, chapter, verse, text, themes, emotions, embedding)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                source_name,
-                str(chunk["page"]),   # use page as chapter
-                f"p.{chunk['page']}",
-                chunk["text"],
-                chunk["themes"],
-                chunk["emotions"],
-                embedding.tolist()
-            ))
+        # New connection per batch — Railway closes long-lived connections
+        with psycopg2.connect(Config.DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                for chunk, embedding in zip(batch, embeddings):
+                    cur.execute("""
+                        INSERT INTO scripture_chunks
+                            (source, chapter, verse, text, themes, emotions, embedding)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        source_name,
+                        chunk.get("chapter"),
+                        chunk.get("verse"),
+                        chunk["text"],
+                        chunk["themes"],
+                        chunk["emotions"],
+                        embedding.tolist()
+                    ))
+            conn.commit()
 
-        conn.commit()
         done = min(i + batch_size, len(chunks))
         print(f"  ✅ {done}/{len(chunks)} chunks stored...", end="\r")
-
-    cur.close()
-    conn.close()
 
     print(f"\n\n🙏 Ingestion complete!")
     print(f"   Source  : {source_name}")
