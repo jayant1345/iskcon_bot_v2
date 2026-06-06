@@ -8,6 +8,7 @@ from bot.input_guard       import check_input
 from bot.language_detector import detect_language, get_greeting_by_language
 from bot.intent_detector   import detect_intent, get_tone_instruction
 from bot.retriever         import retrieve_relevant_chunks, format_chunks_for_prompt, extract_verse_content
+from bot.gita_api          import fetch_shlok
 from bot.book_recommender  import get_book_suggestion
 
 GURU_SYSTEM_PROMPT = """You are a compassionate Vaishnava spiritual guide in the tradition of Srila Prabhupada. You share wisdom from Bhagavat Gita and Shrimad Bhagavatam with love for every soul.
@@ -131,6 +132,10 @@ class SpiritualGuide:
             if chunks else "no passages found"
         )
 
+        # Pre-fetch real Sanskrit shlok from free Gita API (cached after first call)
+        top_ref    = next((c for c in chunks if c.get("chapter") and c.get("verse")), None)
+        shlok_data = fetch_shlok(top_ref["chapter"], top_ref["verse"]) if top_ref else {}
+
         # ── Session Management ────────────────────────────────
         if session_id not in self._sessions:
             self._sessions[session_id] = {
@@ -176,7 +181,7 @@ TONE: {tone} | EMOTION: {emotion}"""
         )
 
         wisdom = response.content[0].text
-        wisdom = self._clean_output(wisdom, language, chunks)
+        wisdom = self._clean_output(wisdom, language, chunks, shlok_data)
 
         session["messages"].append({"role": "assistant", "content": wisdom})
 
@@ -206,7 +211,8 @@ TONE: {tone} | EMOTION: {emotion}"""
             "scripture_ref": scripture_ref,   # e.g. {"source": "Bhagavad Gita As It Is", "chapter": "4", "verse": "20"}
         }
 
-    def _clean_output(self, text: str, language: str, chunks: list = None) -> str:
+    def _clean_output(self, text: str, language: str,
+                      chunks: list = None, shlok_data: dict = None) -> str:
         # Ensure ends with spiritual blessing
         text_lower = text.lower()
         blessings  = ["hare krishna", "jai shri krishna", "हरे कृष्ण", "હरे કૃष्ण", "🙏"]
@@ -220,43 +226,52 @@ TONE: {tone} | EMOTION: {emotion}"""
             text = text.rstrip() + endings.get(language, "\n\nHare Krishna 🙏")
 
         # ── Guaranteed scripture reference + shlok footer ────────
-        # Always appended by code — never relies on Haiku following instructions.
-        if chunks:
-            # Pick the chunk with the best (chapter + verse) reference
-            ref_chunk = next(
-                (c for c in chunks if c.get("chapter") and c.get("verse")),
-                next((c for c in chunks if c.get("chapter")), None)
-            )
-            if ref_chunk:
-                ch  = ref_chunk.get("chapter", "")
-                vs  = ref_chunk.get("verse", "")
-                src = ref_chunk.get("source", "Bhagavad Gita As It Is")
+        if not chunks:
+            return text.strip()
 
-                # Scan all chunks — pick best IAST and longest translation found
-                iast, translation = None, None
-                for c in chunks:
-                    i, t = extract_verse_content(c["text"])
-                    if i and not iast:
-                        iast = i
-                    if t and len(t) > len(translation or ""):
-                        translation = t
-                    if iast and translation and len(translation) > 40:
-                        break
+        ref_chunk = next(
+            (c for c in chunks if c.get("chapter") and c.get("verse")),
+            next((c for c in chunks if c.get("chapter")), None)
+        )
+        if not ref_chunk:
+            return text.strip()
 
-                # Build footer
-                footer_parts = []
-                if ch and vs:
-                    footer_parts.append(f"📖 {src} — Adhyaya (Chapter) {ch}, Shlok (Verse) {vs}")
-                elif ch:
-                    footer_parts.append(f"📖 {src} — Adhyaya (Chapter) {ch}")
+        ch  = ref_chunk.get("chapter", "")
+        vs  = ref_chunk.get("verse", "")
+        src = ref_chunk.get("source", "Bhagavad Gita As It Is")
 
+        # ── Sanskrit: API first, chunk IAST as fallback ───────
+        sanskrit        = (shlok_data or {}).get("sanskrit", "")
+        transliteration = (shlok_data or {}).get("transliteration", "")
+        translation     = (shlok_data or {}).get("translation", "")
+
+        if not sanskrit:
+            # API failed — fall back to IAST extracted from chunk text
+            for c in chunks:
+                iast, trans = extract_verse_content(c["text"])
                 if iast:
-                    footer_parts.append(f"🕉️  {iast}")
+                    transliteration = iast
+                    if trans and len(trans) > len(translation):
+                        translation = trans
+                    break
 
-                if translation:
-                    footer_parts.append(f'"{translation}"')
+        # ── Build footer ──────────────────────────────────────
+        footer_parts = []
 
-                if footer_parts:
-                    text = text.rstrip() + "\n\n" + "\n\n".join(footer_parts)
+        if ch and vs:
+            footer_parts.append(f"📖 {src} — Adhyaya (Chapter) {ch}, Shlok (Verse) {vs}")
+        elif ch:
+            footer_parts.append(f"📖 {src} — Adhyaya (Chapter) {ch}")
+
+        if sanskrit:
+            footer_parts.append(f"🕉️\n{sanskrit}")
+        elif transliteration:
+            footer_parts.append(f"🕉️  {transliteration}")
+
+        if translation:
+            footer_parts.append(f'"{translation}"')
+
+        if footer_parts:
+            text = text.rstrip() + "\n\n" + "\n\n".join(footer_parts)
 
         return text.strip()
