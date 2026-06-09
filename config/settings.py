@@ -18,4 +18,3 @@ class Config:
     # Downloads ~90MB once, then runs offline forever
     EMBEDDING_MODEL     = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION = 384
-    ADMIN_PASSWORD      = os.getenv("ADMIN_PASSWORD", "hare-krishna-admin")

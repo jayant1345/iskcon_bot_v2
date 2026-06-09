@@ -6,33 +6,16 @@
 # Run Railway:   gunicorn app:app  (via Procfile)
 
 import uuid
-from flask import Flask, request, jsonify, render_template, redirect, make_response
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from config.settings     import Config
+from config.settings   import Config
 from bot.spiritual_guide import SpiritualGuide
-from bot.admin_sessions  import (
-    init_table, create_session, refresh_session,
-    end_session, get_active_sessions, get_recent_logins,
-    SESSION_COOKIE,
-)
 
 app   = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 CORS(app, resources={r"/api/*": {"origins": ["https://iskconbooks.in", "http://iskconbooks.in"]}})
 guide = SpiritualGuide()
-init_table()   # ensure admin_sessions table exists
 print("🙏 Spiritual Guide ready. Hare Krishna!")
-
-
-def _get_admin_token() -> str:
-    return request.cookies.get(SESSION_COOKIE, "")
-
-def _admin_required():
-    """Returns None if authenticated, else a redirect response."""
-    token = _get_admin_token()
-    if token and refresh_session(token):
-        return None
-    return redirect("/admin/login")
 
 
 # ════════════════════════════════════════
@@ -184,64 +167,6 @@ def debug_rag():
 @app.route('/bot')
 def bot_page():
     return render_template('bot_demo.html')
-
-
-# ════════════════════════════════════════
-# ADMIN ROUTES
-# ════════════════════════════════════════
-
-@app.route('/admin/login', methods=['GET'])
-def admin_login_page():
-    return render_template('admin_login.html')
-
-
-@app.route('/admin/login', methods=['POST'])
-def admin_login():
-    password = request.form.get('password', '')
-    if password != Config.ADMIN_PASSWORD:
-        return render_template('admin_login.html', error="Wrong password. Hare Krishna 🙏")
-
-    ip         = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-    user_agent = request.headers.get('User-Agent', '')
-    token      = create_session(ip, user_agent)
-
-    resp = make_response(redirect('/admin'))
-    resp.set_cookie(SESSION_COOKIE, token, httponly=True, samesite='Lax', max_age=60 * 60 * 8)
-    return resp
-
-
-@app.route('/admin')
-def admin_dashboard():
-    redir = _admin_required()
-    if redir:
-        return redir
-
-    active  = get_active_sessions()
-    history = get_recent_logins(20)
-    return render_template('admin_dashboard.html',
-                           active_sessions=active,
-                           recent_logins=history,
-                           active_count=len(active))
-
-
-@app.route('/admin/logout', methods=['POST'])
-def admin_logout():
-    token = _get_admin_token()
-    if token:
-        end_session(token)
-    resp = make_response(redirect('/admin/login'))
-    resp.delete_cookie(SESSION_COOKIE)
-    return resp
-
-
-@app.route('/admin/api/sessions')
-def admin_api_sessions():
-    """JSON endpoint — call from monitoring tools."""
-    redir = _admin_required()
-    if redir:
-        return jsonify({'error': 'Unauthorized'}), 401
-    active = get_active_sessions()
-    return jsonify({'active_count': len(active), 'sessions': active})
 
 
 # ════════════════════════════════════════
