@@ -60,6 +60,59 @@ ROLE_ANCHOR = (
     "Speak in warm flowing sentences. Never use bullet points."
 )
 
+# ── Model Router ──────────────────────────────────────────────────────────────
+# Signals that indicate a philosophically complex query needing Sonnet's depth.
+_COMPLEX_SIGNALS = frozenset([
+    "tattva", "panch tatva", "panch", "navadha", "navdha", "ashta sattvik",
+    "ashta", "sapta", "nava bhakti", "brahman", "paramatma", "jivatma",
+    "jiva", "prakriti", "purusha", "moksha", "mukti", "parampara",
+    "sampradaya", "acharya", "bhagavatam", "srimad", "upanishad", "purana",
+    "explain", "difference between", "what is the meaning", "why does",
+    "how does", "philosophy", "principle", "concept", "describe",
+    "what are the", "tell me about", "meaning of",
+])
+
+# Signals for pure greetings / simple thanks → Haiku is enough
+_SIMPLE_SIGNALS = frozenset([
+    "hare krishna", "jai shri krishna", "radhe radhe", "namaste",
+    "hello", "good morning", "good evening", "good night",
+    "thank you", "thanks", "shukriya", "dhanyavad", "pranaam",
+])
+
+_COMPLEX_EMOTIONS  = {"grief", "guilt", "hopelessness", "seeking_purpose", "anxiety"}
+_COMPLEX_THEMES    = {"knowledge", "tradition", "avatar", "scripture", "liberation"}
+_SONNET            = "claude-sonnet-4-6"
+_HAIKU             = "claude-haiku-4-5-20251001"
+
+
+def _select_model(message: str, emotion: str, themes: list) -> str:
+    """Returns Sonnet for deep/philosophical queries, Haiku for simple ones."""
+    msg_lower  = message.lower()
+    word_count = len(message.split())
+
+    # Pure short greeting or thanks → Haiku
+    if word_count <= 7 and any(s in msg_lower for s in _SIMPLE_SIGNALS):
+        return _HAIKU
+
+    # Long message → complex → Sonnet
+    if word_count > 20:
+        return _SONNET
+
+    # Heavy emotion needs empathy depth → Sonnet
+    if emotion in _COMPLEX_EMOTIONS:
+        return _SONNET
+
+    # Sanskrit / philosophical keywords → Sonnet
+    if any(s in msg_lower for s in _COMPLEX_SIGNALS):
+        return _SONNET
+
+    # Complex theme detected → Sonnet
+    if any(t in themes for t in _COMPLEX_THEMES):
+        return _SONNET
+
+    # Everything else (short devotional questions, follow-ups) → Haiku
+    return _HAIKU
+
 
 class SpiritualGuide:
 
@@ -171,12 +224,13 @@ SCRIPTURE CONTEXT (answer ONLY from these passages — not from training knowled
 
 TONE: {tone} | EMOTION: {emotion}"""
 
-        # ── Call Claude Haiku ─────────────────────────────────
+        # ── Model Selection: Sonnet for deep/complex, Haiku for simple ──────────
+        chosen_model          = _select_model(message, emotion, themes)
         lang_token_multiplier = 3 if language == "gujarati" else (2 if language == "hindi" else 1)
         effective_max_tokens  = Config.BOT_MAX_TOKENS * lang_token_multiplier
 
         response = self.client.messages.create(
-            model      = "claude-sonnet-4-6",
+            model      = chosen_model,
             max_tokens = effective_max_tokens,
             system     = full_system,
             messages   = recent_messages,
