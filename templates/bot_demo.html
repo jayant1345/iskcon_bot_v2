@@ -20,12 +20,13 @@
                 radial-gradient(ellipse at 50% 50%, rgba(255,240,200,0.10) 0%, transparent 65%);
             color: #2d1f08;
             font-family: 'Crimson Pro', serif;
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             position: relative;
-            overflow-x: hidden;
         }
 
         /* ── Floating lotus flowers in background ── */
@@ -106,15 +107,19 @@
         .page-wrap {
             width: 100%;
             max-width: 500px;
-            padding: 20px;
+            height: 100%;
+            padding: 14px 20px 10px;
             position: relative;
             z-index: 1;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* ── Header ── */
+        /* ── Header — stays frozen, never scrolls ── */
         .page-header {
             text-align: center;
-            margin-bottom: 26px;
+            flex-shrink: 0;
+            margin-bottom: 16px;
         }
 
         /* decorative ring around image */
@@ -192,8 +197,12 @@
             transition: all 0.3s;
         }
 
-        /* ── Chat Box ── */
+        /* ── Chat Box — fills all remaining space below the header ── */
         .chat-box {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
             background: #ffffff;
             border: 1px solid rgba(212,134,10,0.16);
             border-radius: 22px;
@@ -248,7 +257,8 @@
 
         /* ── Messages ── */
         .messages {
-            height: 430px;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
             padding: 18px;
             display: flex;
@@ -402,8 +412,10 @@
         .chat-foot a:hover { color: #d4860a; }
 
         @media(max-width:520px){
-            .page-wrap  { padding: 12px; }
-            .messages   { height: 370px; }
+            .page-wrap   { padding: 8px 10px 6px; }
+            .page-header { margin-bottom: 10px; }
+            .om-symbol   { width: 72px; height: 72px; }
+            .page-header h1 { font-size: 1.45rem; }
             .lotus:nth-child(7),
             .lotus:nth-child(8),
             .lotus:nth-child(9),
