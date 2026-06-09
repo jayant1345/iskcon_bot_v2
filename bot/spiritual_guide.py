@@ -7,7 +7,7 @@ from config.settings import Config
 from bot.input_guard       import check_input
 from bot.language_detector import detect_language, get_greeting_by_language
 from bot.intent_detector   import detect_intent, get_tone_instruction
-from bot.retriever         import retrieve_relevant_chunks, format_chunks_for_prompt, extract_verse_content
+from bot.retriever         import retrieve_relevant_chunks, format_chunks_for_prompt, extract_verse_content, detect_verse_reference
 from bot.gita_api          import fetch_shlok
 from bot.book_recommender  import get_book_suggestion
 
@@ -174,7 +174,12 @@ class SpiritualGuide:
                             if m["role"] == "user"]
         follow_up_words  = ["more", "explain", "tell me", "continue", "again",
                             "what about", "further", "and", "also", "why"]
-        is_follow_up     = (len(message.split()) < 10 and
+        # Never treat an explicit verse reference as a follow-up — doing so would
+        # prepend previous messages and cause _detect_verse_reference to match an
+        # older chapter/verse instead of the one the user just named.
+        has_explicit_ref = bool(detect_verse_reference(message)[0])
+        is_follow_up     = (not has_explicit_ref and
+                            len(message.split()) < 10 and
                             any(w in msg_lower for w in follow_up_words))
         search_text      = " ".join(recent_user_msgs[-2:] + [message]) if is_follow_up else message
 

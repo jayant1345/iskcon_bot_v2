@@ -178,7 +178,7 @@ def _resolve_ref(chapter, verse, text: str):
     return ch, vs
 
 
-def _detect_verse_reference(question: str):
+def detect_verse_reference(question: str):
     """
     Returns (chapter_str, verse_str) when the user explicitly names a verse.
     Handles: "chapter 17 verse 18", "chapter 17 and verse 18", "17.18", "BG 17.18".
@@ -230,7 +230,7 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
     # Strategy 0: Direct DB lookup when user explicitly names a chapter and verse.
     # This bypasses embedding similarity entirely so "chapter 17 verse 18" always
     # returns chapter 17 verse 18 — not whatever is semantically closest.
-    exact_ch, exact_vs = _detect_verse_reference(question)
+    exact_ch, exact_vs = detect_verse_reference(question)
     if exact_ch and exact_vs:
         cur.execute("""
             SELECT source, chapter, verse, text, themes, emotions,
