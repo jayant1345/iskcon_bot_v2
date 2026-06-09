@@ -176,7 +176,7 @@ TONE: {tone} | EMOTION: {emotion}"""
         effective_max_tokens  = Config.BOT_MAX_TOKENS * lang_token_multiplier
 
         response = self.client.messages.create(
-            model      = "claude-haiku-4-5-20251001",
+            model      = "claude-sonnet-4-6",
             max_tokens = effective_max_tokens,
             system     = full_system,
             messages   = recent_messages,
