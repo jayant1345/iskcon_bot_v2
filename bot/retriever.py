@@ -178,10 +178,41 @@ def _resolve_ref(chapter, verse, text: str):
     return ch, vs
 
 
+def _detect_verse_reference(question: str):
+    """
+    Returns (chapter_str, verse_str) when the user explicitly names a verse.
+    Handles: "chapter 17 verse 18", "chapter 17 and verse 18", "17.18", "BG 17.18".
+    Returns (None, None) when no explicit reference is found.
+    """
+    m = re.search(
+        r'(?:chapter|ch\.?)\s*(\d+|[a-zA-Z]+)\s*(?:and\s+)?'
+        r'(?:verse|shlok|slok|text|v\.?)\s*(\d+)',
+        question, re.IGNORECASE
+    )
+    if m:
+        ch_raw = m.group(1).strip()
+        vs_raw = m.group(2).strip()
+        ch = _ORDINALS.get(ch_raw.upper()) or (ch_raw if ch_raw.isdigit() else None)
+        if ch and vs_raw.isdigit():
+            try:
+                if 1 <= int(ch) <= 18 and 1 <= int(vs_raw) <= _CHAPTER_MAX_VERSE.get(ch, 999):
+                    return ch, vs_raw
+            except (ValueError, TypeError):
+                pass
+    # "17.18" — two small integers separated by a dot
+    m = re.search(r'\b([1-9]|1[0-8])\.([1-9]\d?)\b', question)
+    if m:
+        ch, vs = m.group(1), m.group(2)
+        if 1 <= int(vs) <= _CHAPTER_MAX_VERSE.get(ch, 999):
+            return ch, vs
+    return None, None
+
+
 def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> list:
     """
     Finds the most relevant scripture passages for a question.
     Strategy:
+      0. Exact chapter+verse lookup when user explicitly names one (takes priority)
       1. Theme-filtered similarity (lower threshold — Gita vocabulary differs from queries)
       2. Pure semantic similarity (higher threshold)
     """
@@ -192,6 +223,43 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
 
     conn = psycopg2.connect(Config.DATABASE_URL)
     cur  = conn.cursor()
+
+    seen  = set()
+    final = []
+
+    # Strategy 0: Direct DB lookup when user explicitly names a chapter and verse.
+    # This bypasses embedding similarity entirely so "chapter 17 verse 18" always
+    # returns chapter 17 verse 18 — not whatever is semantically closest.
+    exact_ch, exact_vs = _detect_verse_reference(question)
+    if exact_ch and exact_vs:
+        cur.execute("""
+            SELECT source, chapter, verse, text, themes, emotions,
+                   1 - (embedding <=> %s::vector) AS similarity
+            FROM scripture_chunks
+            WHERE chapter = %s AND verse = %s
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s;
+        """, (embedding, exact_ch, exact_vs, embedding, top_k))
+        for row in cur.fetchall():
+            key = row[3][:100]
+            if key not in seen:
+                seen.add(key)
+                ch, vs = _resolve_ref(row[1], row[2], row[3])
+                final.append({
+                    "source":     row[0],
+                    "chapter":    ch or exact_ch,
+                    "verse":      vs or exact_vs,
+                    "text":       row[3],
+                    "themes":     row[4],
+                    "emotions":   row[5],
+                    "similarity": float(row[6]),
+                    "matched_by": "exact_ref",
+                })
+        if final:
+            cur.close()
+            conn.close()
+            logger.info("✅ Exact ref Ch %s V %s → %d chunks", exact_ch, exact_vs, len(final))
+            return final
 
     # Strategy 1: Theme-filtered search — include even low-similarity results
     # because theme tags are more reliable than embeddings for topical matching
@@ -216,9 +284,6 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
         LIMIT %s;
     """, (embedding, embedding, top_k * 3))
     semantic_results = cur.fetchall()
-
-    seen  = set()
-    final = []
 
     # Theme results first (lower threshold — already filtered by topic)
     for row in theme_results:
