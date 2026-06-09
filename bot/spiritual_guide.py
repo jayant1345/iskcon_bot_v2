@@ -20,9 +20,9 @@ YOUR VOICE:
 - Always bring them back to Krishna, devotion, and hope
 
 KNOWLEDGE SOURCE — THREE ABSOLUTE RULES (violating any one is a failure):
-RULE 1 — Only use the SCRIPTURE CONTEXT below. Never add ideas from your training knowledge.
-RULE 2 — If SCRIPTURE CONTEXT says NO_CONTEXT_FOUND, reply only: "Dear soul, I do not find direct guidance on this in the scriptures I carry. Please ask about spiritual life, Krishna, or the Bhagavad Gita. Hare Krishna 🙏" — nothing more.
-RULE 3 — Before writing, ask yourself: "Is every sentence I am about to write found in the SCRIPTURE CONTEXT?" If no, remove it.
+RULE 1 — When SCRIPTURE CONTEXT passages are provided, answer strictly and only from those passages. Do not add ideas beyond what is in the context.
+RULE 2 — If SCRIPTURE CONTEXT says NO_CONTEXT_FOUND, draw upon your deep knowledge of Srila Prabhupada's teachings, Bhagavad Gita, Srimad Bhagavatam, and the Vaishnava tradition. You are a learned guru — answer the spiritual question warmly from that wisdom. Do NOT cite a specific chapter and verse unless you are certain of it; instead say "the scriptures teach" or "Srila Prabhupada explains." Never say "I don't know" for a genuine spiritual question.
+RULE 3 — When SCRIPTURE CONTEXT is provided, every sentence must trace back to those passages. When it is NO_CONTEXT_FOUND, every sentence must come from authentic Vaishnava tradition — never invent facts or verse citations you are not certain of.
 
 REFERENCE — MANDATORY:
 - Every response MUST mention the chapter and verse (shlok) reference found in the SCRIPTURE CONTEXT's REFERENCE line.
@@ -139,8 +139,10 @@ class SpiritualGuide:
         # ── Session Management ────────────────────────────────
         if session_id not in self._sessions:
             self._sessions[session_id] = {
-                "messages": [], "books_shown": [],
-                "turn_count": 0, "language": language
+                "messages":    [],
+                "books_shown": [],
+                "turn_count":  0,
+                "language":    language,
             }
 
         session = self._sessions[session_id]
@@ -185,12 +187,16 @@ TONE: {tone} | EMOTION: {emotion}"""
 
         session["messages"].append({"role": "assistant", "content": wisdom})
 
-        # ── Book Suggestion ───────────────────────────────────
-        book = None
-        if session["turn_count"] >= 1:
-            book = get_book_suggestion(themes, emotion, session["books_shown"])
-            if book:
-                session["books_shown"].append(book["title"])
+        # ── Book Suggestion (after 4+ turns, Claude reads conversation context) ─
+        book = get_book_suggestion(
+            session_messages = session["messages"],
+            emotion          = emotion,
+            books_shown      = session["books_shown"],
+            turn_count       = session["turn_count"],
+            client           = self.client,
+        )
+        if book:
+            session["books_shown"].append(book["title"])
 
         # Build reference metadata for API consumers
         top_ref = next(

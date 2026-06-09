@@ -13,7 +13,7 @@ EMOTION_MAP = {
     "seeking_purpose":  ["purpose","meaning","why am i here","dharma","what should i do","direction","calling","mission","zindagi ka matlab"],
     "loneliness":       ["alone","lonely","no one","isolated","nobody cares","abandoned","friendless","akela","akeli"],
     "gratitude":        ["grateful","thankful","blessed","hare krishna","jai shri krishna","happy","joy","shukriya","dhanyavad"],
-    "spiritual_seeking":["how to meditate","how to pray","how to chant","want to know krishna","start spiritual","bhakti","surrender","pooja"],
+    "spiritual_seeking":["how to meditate","how to pray","how to chant","want to know krishna","start spiritual","bhakti","surrender","pooja","tattva","panch tatva","what is","tell me about","explain","navadha","nine","ashta","sapta","nava","philosophy","principle","concept"],
 }
 
 THEME_MAP = {
@@ -29,6 +29,10 @@ THEME_MAP = {
     "suffering":    ["pain","suffering","hardship","difficult","struggle","dukh","takleef"],
     "anger":        ["anger","forgiveness","forgive","hate","krodh","maafi"],
     "liberation":   ["moksha","liberation","freedom","mukti","transcend"],
+    "knowledge":    ["tattva","panch","five","philosophy","principle","truth","gyan","jnana","brahman","what is","explain","tell me about","meaning of","definition"],
+    "scripture":    ["gita","bhagavad","bhagavatam","srimad","chapter","verse","shlok","shastras","purana","upanishad"],
+    "tradition":    ["guru","prabhupada","iskcon","vaishnava","parampara","acharya","tradition","lineage","sampradaya"],
+    "avatar":       ["avatar","incarnation","vishnu","krishna came","descended","form of god","manifestation"],
 }
 
 
@@ -50,11 +54,17 @@ def detect_intent(message: str) -> dict:
 
     if not themes:
         fallback = {
-            "grief": ["death","soul"], "anxiety": ["meditation","surrender"],
-            "confusion": ["dharma","karma"], "anger": ["anger","detachment"],
-            "guilt": ["karma","devotion"], "hopelessness": ["surrender","suffering"],
-            "seeking_purpose": ["dharma","karma"], "loneliness": ["devotion","surrender"],
-            "gratitude": ["devotion"], "spiritual_seeking": ["devotion","meditation"],
+            "grief":            ["death","soul"],
+            "anxiety":          ["meditation","surrender"],
+            "confusion":        ["dharma","karma"],
+            "anger":            ["anger","detachment"],
+            "guilt":            ["karma","devotion"],
+            "hopelessness":     ["surrender","suffering"],
+            "seeking_purpose":  ["dharma","karma"],
+            "loneliness":       ["devotion","surrender"],
+            "gratitude":        ["devotion"],
+            "spiritual_seeking":["devotion","meditation","knowledge"],
+            "general_seeking":  ["devotion","knowledge"],
         }
         themes = fallback.get(emotion, ["devotion"])
 

@@ -13,8 +13,10 @@ logger = logging.getLogger(__name__)
 # Semantic threshold for pure similarity results.
 # Theme-matched results use a lower threshold (THEME_THRESHOLD) since
 # vocabulary mismatch between natural queries and Prabhupada's English is common.
-SIMILARITY_THRESHOLD = 0.28
+# BROAD_THRESHOLD is the last-resort fallback when primary retrieval finds nothing.
+SIMILARITY_THRESHOLD = 0.18
 THEME_THRESHOLD      = 0.05
+BROAD_THRESHOLD      = 0.08
 
 _model = None
 
@@ -66,6 +68,30 @@ _QUERY_EXPANSIONS = {
     "ego":          "ego false self pride ahankara identity body material",
     "family":       "family relations duty attachment love grief lamentation",
     "suffering":    "suffering pain misery duality happiness distress",
+    # Sanskrit / Vaishnava philosophical concepts
+    "tattva":       "tattva five elements truth nature principle reality substance ishvara jiva prakriti kala karma",
+    "panch":        "panch five tattva elements eternal truths nature principle philosophy",
+    "five":         "five pancha tattva elements truths nature eternal five truths philosophy",
+    "consciousness":"consciousness awareness pure spirit atma soul chit being presence transcendental",
+    "devotee":      "devotee bhakta vaishnava servant surrender devotion service disciple pure",
+    "guru":         "guru spiritual master teacher guide acharya prabhupada disciplic succession parampara",
+    "chaitanya":    "chaitanya mahaprabhu golden avatar bhakti movement sankirtan devotion",
+    "creation":     "creation manifest prakriti universe material nature three modes gunas",
+    "nature":       "nature prakriti material creation manifest world modes gunas three",
+    "time":         "time eternal kala cycle age yuga duration birth death",
+    "service":      "service seva devotion bhakti surrender worship action",
+    "material":     "material nature prakriti world illusion maya temporary body senses",
+    "eternal":      "eternal soul spirit permanent transcendental beyond time deathless",
+    "worship":      "worship devotion prayer bhajan kirtan pooja arati service temple",
+    "truth":        "truth reality tattva brahman absolute self nature knowledge eternal",
+    "bhagavad":     "bhagavad gita krishna arjuna battle kurukshetra wisdom teaching chapter",
+    "gita":         "gita bhagavad krishna arjuna chapter verse teaching wisdom purport",
+    "prabhupada":   "prabhupada srila founder acharya iskcon devotion teaching purport",
+    "iskcon":       "iskcon hare krishna movement prabhupada devotion temple",
+    "avatar":       "avatar incarnation form lord vishnu krishna descent purpose yuga",
+    "bhagavatam":   "bhagavatam srimad purana story devotion krishna vishnu creation eternal",
+    "philosophy":   "philosophy tattva principle truth knowledge wisdom understand reality",
+    "scripture":    "scripture gita bhagavatam shastras verse chapter teaching purport",
 }
 
 
@@ -191,9 +217,6 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
     """, (embedding, embedding, top_k * 3))
     semantic_results = cur.fetchall()
 
-    cur.close()
-    conn.close()
-
     seen  = set()
     final = []
 
@@ -233,13 +256,49 @@ def retrieve_relevant_chunks(question: str, themes: list, top_k: int = None) -> 
                 "matched_by": "semantic",
             })
 
+    # Strategy 3: Broad fallback — when primary retrieval finds nothing,
+    # cast a very wide net at a very low threshold to surface *any* related passage.
+    # This prevents "I don't know" responses for abstract Sanskrit/Vaishnava concepts
+    # like "Panch Tatva" or "Navadha Bhakti" where vocabulary distance is high but
+    # the question is genuinely spiritual and answerable from scripture.
+    if not final:
+        cur.execute("""
+            SELECT source, chapter, verse, text, themes, emotions,
+                   1 - (embedding <=> %s::vector) AS similarity
+            FROM scripture_chunks
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s;
+        """, (embedding, embedding, top_k * 5))
+        broad_results = cur.fetchall()
+
+        for row in broad_results:
+            key = row[3][:100]
+            sim = float(row[6])
+            if key not in seen and len(final) < top_k and sim > BROAD_THRESHOLD:
+                seen.add(key)
+                ch, vs = _resolve_ref(row[1], row[2], row[3])
+                final.append({
+                    "source":     row[0],
+                    "chapter":    ch,
+                    "verse":      vs,
+                    "text":       row[3],
+                    "themes":     row[4],
+                    "emotions":   row[5],
+                    "similarity": sim,
+                    "matched_by": "broad_fallback",
+                })
+
+    cur.close()
+    conn.close()
+
     if not final:
         logger.warning("⚠️  No relevant chunks found for: '%s'", question[:80])
     else:
         logger.info(
-            "✅ %d chunks | top sim=%.3f | refs=%s",
+            "✅ %d chunks | top sim=%.3f | matched_by=%s | refs=%s",
             len(final),
             max(c["similarity"] for c in final),
+            final[0].get("matched_by", "?"),
             [(c["chapter"], c["verse"]) for c in final],
         )
 
